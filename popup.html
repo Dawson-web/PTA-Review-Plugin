@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>PTA复习助手</title>
+  <style>
+    :root {
+      --primary-color: #1890ff;
+      --success-color: #52c41a;
+      --warning-color: #faad14;
+      --error-color: #f5222d;
+      --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+      --border-radius-base: 4px;
+      --box-shadow-base: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      
+    }
+    
+    body {
+      width: 300px;
+      background-color: transparent;
+      border-color: transparent;
+    }
+    
+    .ant-card {
+      padding: 16px;
+    }
+    
+    .ant-card-head {
+      border-bottom: 1px solid #f0f0f0;
+      padding-bottom: 12px;
+      margin-bottom: 16px;
+    }
+    
+    h1 {
+      font-size: 18px;
+      font-weight: 500;
+      text-align: center;
+      color: rgba(0, 0, 0, 0.85);
+    }
+    
+    .ant-divider {
+      height: 1px;
+      background-color: #f0f0f0;
+      margin: 16px 0;
+    }
+    
+    .control-group {
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      padding: 4px 0;
+      border-radius: var(--border-radius-base);
+      transition: all 0.3s;
+    }
+    
+    .control-group:hover {
+      background-color: rgba(0, 0, 0, 0.025);
+    }
+    
+    label {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      width: 100%;
+    }
+    
+    .control-text {
+      flex: 1;
+      font-size: 14px;
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 22px;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.25);
+      transition: .4s;
+      border-radius: 11px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px 0 rgba(0, 35, 11, 0.2);
+    }
+    
+    input:checked + .slider {
+      background-color: var(--primary-color);
+    }
+    
+    input:focus + .slider {
+      box-shadow: 0 0 1px var(--primary-color);
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(22px);
+    }
+    
+    .footer {
+      font-size: 12px;
+      color: rgba(0, 0, 0, 0.45);
+      text-align: center;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="ant-card">
+    <div class="ant-card-head">
+      <h1>PTA复习助手</h1>
+    </div>
+    
+    <div class="control-group">
+      <label>
+        <span class="switch">
+          <input type="checkbox" id="toggleRadio">
+          <span class="slider"></span>
+        </span>
+        <span class="control-text">隐藏单选按钮</span>
+      </label>
+    </div>
+    
+    <div class="control-group">
+      <label>
+        <span class="switch">
+          <input type="checkbox" id="toggleCheckbox">
+          <span class="slider"></span>
+        </span>
+        <span class="control-text">隐藏多选按钮</span>
+      </label>
+    </div>
+    
+    <div class="control-group">
+      <label>
+        <span class="switch">
+          <input type="checkbox" id="toggleResults">
+          <span class="slider"></span>
+        </span>
+        <span class="control-text">隐藏结果区域</span>
+      </label>
+    </div>
+    
+    <div class="control-group">
+      <label>
+        <span class="switch">
+          <input type="checkbox" id="toggleInputs">
+          <span class="slider"></span>
+        </span>
+        <span class="control-text">隐藏填空答案</span>
+      </label>
+    </div>
+    <div class="footer">
+        刷新页面后设置将自动应用
+      </div>
+  </div>
+  
+ 
+
+  <script src="popup.js"></script>
+</body>
+</html> 

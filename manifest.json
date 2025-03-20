@@ -1,0 +1,30 @@
+{
+    "manifest_version": 3,
+    "name": "PTA复习助手",
+    "version": "1.0",
+    "description": "动态隐藏PTA页面元素",
+    "background": {
+        "service_worker": "background.js"
+    },
+    "action": {
+        "default_popup": "popup.html",
+        "default_title": "PTA复习助手"
+    },
+    "permissions": [
+      "activeTab",      
+      "scripting",
+      "storage"
+    ],
+    "host_permissions": [
+      "*://pintia.cn/*" 
+    ],
+    "content_scripts": [
+      {
+        "matches": ["*://pintia.cn/*"],
+        "js": ["content.js"]
+      }
+    ]
+}
+
+  
+  
