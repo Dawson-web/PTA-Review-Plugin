@@ -135,6 +135,28 @@
       text-align: center;
       margin-top: 8px;
     }
+
+    .export-button {
+      width: 100%;
+      padding: 8px 16px;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: var(--border-radius-base);
+      cursor: pointer;
+      font-size: 14px;
+      margin-bottom: 16px;
+      transition: all 0.3s;
+    }
+
+    .export-button:hover {
+      background-color: #1d4ed8;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+
+    .export-button:active {
+      transform: translateY(1px);
+    }
   </style>
 </head>
 <body>
@@ -182,6 +204,11 @@
         <span class="control-text">隐藏填空答案</span>
       </label>
     </div>
+
+    <button id="exportButton" class="export-button">
+      导出答题记录
+    </button>
+
     <div class="footer">
         刷新页面后设置将自动应用
        <div>反馈：<a href="https://github.com/Dawson-web" target="_blank" >GitHub Issues</a></div>
@@ -191,5 +218,6 @@
  
 
   <script src="popup.js"></script>
+
 </body>
 </html> 
