@@ -157,6 +157,28 @@
     .export-button:active {
       transform: translateY(1px);
     }
+
+    .import-button {
+      width: 100%;
+      padding: 8px 16px;
+      background-color: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: var(--border-radius-base);
+      cursor: pointer;
+      font-size: 14px;
+      margin-bottom: 16px;
+      transition: all 0.3s;
+    }
+    
+    .import-button:hover {
+      background-color: #4338ca;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+    
+    .import-button:active {
+      transform: translateY(1px);
+    }
   </style>
 </head>
 <body>
@@ -216,6 +238,9 @@
 
     <button id="exportButton" class="export-button">
       导出答题答案
+    </button>
+    <button id="importButton" class="import-button">
+      导入答题答案
     </button>
 
     <div class="footer">
