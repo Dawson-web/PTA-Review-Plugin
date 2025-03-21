@@ -55,6 +55,14 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+  // 隐藏正确答案
+  const toggleRight = document.getElementById("toggleRight");
+  toggleRight.addEventListener("change", function () {
+    const hideRight = toggleRight.checked;
+    chrome.storage.sync.set({ hideRight }, function () {
+      sendMessage({ type: "right", hide: hideRight });
+    });
+  });
   // 向当前标签页发送消息
   function sendMessage(message) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
