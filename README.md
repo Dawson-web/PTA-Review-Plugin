@@ -8,6 +8,7 @@
 - 隐藏/显示多选按钮
 - 隐藏/显示结果区域
 - 隐藏/显示填空答案
+- 过滤回答正确题目
 - 导出做题答案（使用前请先关闭对应的题目隐藏，否则导出的答案对应部分也会被隐藏）
 
 ## 安装方法
@@ -36,6 +37,10 @@
 
 
 ![image](https://github.com/user-attachments/assets/0a6d1e37-8ebe-4696-88d7-02ce471807f3)
+
+
+![image](https://github.com/user-attachments/assets/b284f07e-20f9-4433-847b-2a9647c97e9e)
+
 
 
 ## 使用方法
