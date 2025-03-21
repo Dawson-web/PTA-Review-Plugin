@@ -43,6 +43,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     case "right":
       toggleRightVisibility(message.hide);
       break;
+    case "importAnswers":
+      importAnswers();
+      break;
   }
 
   // 返回确认消息
@@ -129,7 +132,69 @@ function exportAnswers() {
   URL.revokeObjectURL(url);
 }
 
-// 控制正确答案的可见性  pc-x pt-2 pl-4 scroll-mt-[calc(var(--height-header)+4rem+0.5rem)]
+function simulateFullInteraction(targetRadioInput, value) {
+  // 先点击元素
+  targetRadioInput.click();
+  
+  // 修改值
+  targetRadioInput.value = value;
+  
+  // 触发额外的事件
+  // 1. 触发 input 事件
+  const inputEvent = new Event('input', { bubbles: true });
+  targetRadioInput.dispatchEvent(inputEvent);
+  
+  // 2. 触发 change 事件
+  const changeEvent = new Event('change', { bubbles: true });
+  targetRadioInput.dispatchEvent(changeEvent);
+}
+
+// 导入答题答案
+function importAnswers() {
+  // 获取目标元素 
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".html";
+  input.onchange = function (event) {
+    const file = event.target.files[0];
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      const htmlContent = event.target.result;
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, "text/html");
+      const element = doc.querySelector(
+        'div[class*="flex"][class*="flex-col"][class*="h-[var(--height-exclude-header)]"][class*="overflow-auto"]'
+      );
+      const targetElement = document.querySelector(
+        'div[class*="flex"][class*="flex-col"][class*="h-[var(--height-exclude-header)]"][class*="overflow-auto"]'
+      );
+
+      const Inputs = element.querySelectorAll('input');
+      const targetInputs = targetElement.querySelectorAll('input');
+      for (let i = 0; i < Inputs.length; i++) {
+        if(Inputs[i].id===targetInputs[i].id)
+      { 
+        if(Inputs[i].checked!==targetInputs[i].checked&&Inputs[i].type==="radio")
+         {
+          targetInputs[i].click();
+        }
+        else if(Inputs[i].checked!==targetInputs[i].checked&&Inputs[i].type==="checkbox")
+         {
+          targetInputs[i].click();
+         }
+        else if(Inputs[i].value!==targetInputs[i].value)
+         {
+          simulateFullInteraction(targetInputs[i], Inputs[i].value);
+         }
+      }
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// 控制正确答案的可见性 
 function toggleRightVisibility(hide) {
   const parentElements = document.querySelectorAll(
     'div[class*="pc-x"][class*="pt-2"][class*="pl-4"][class*="scroll-mt-[calc(var(--height-header)+4rem+0.5rem)]"]'
