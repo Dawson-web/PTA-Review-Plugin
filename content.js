@@ -40,6 +40,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     case "exportAnswers":
       exportAnswers();
       break;
+    case "right":
+      toggleRightVisibility(message.hide);
+      break;
   }
 
   // 返回确认消息
@@ -124,6 +127,31 @@ function exportAnswers() {
   link.click();
 
   URL.revokeObjectURL(url);
+}
+
+// 控制正确答案的可见性  pc-x pt-2 pl-4 scroll-mt-[calc(var(--height-header)+4rem+0.5rem)]
+function toggleRightVisibility(hide) {
+  const parentElements = document.querySelectorAll(
+    'div[class*="pc-x"][class*="pt-2"][class*="pl-4"][class*="scroll-mt-[calc(var(--height-header)+4rem+0.5rem)]"]'
+  );
+    // 定义要查找的字符串
+    const targetString = '<span style="color: rgb(255, 59, 48);">答案正确</span>';
+  
+    // 存储结果的数组
+    const matchingElements = [];
+    
+    // 遍历每个父元素
+    parentElements.forEach(element => {
+      // 检查是否有包含目标字符串的input子元素
+      const input = element.querySelectorAll('div[class*="flex"][class*="items-start"][class*="space-x-4"]')[0];
+        if (input.innerHTML && input.innerHTML.includes(targetString)) {
+          matchingElements.push(element);
+        }
+      
+  });
+  matchingElements.forEach(function (input) {
+    input.style.display = hide ? "none" : "block";
+  });
 }
 
 // 提取页面中所有 CSS 规则
