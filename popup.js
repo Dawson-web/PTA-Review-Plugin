@@ -63,6 +63,17 @@ document.addEventListener("DOMContentLoaded", function () {
       sendMessage({ type: "right", hide: hideRight });
     });
   });
+
+  // 导入答题答案
+  const importButton = document.getElementById("importButton");
+  importButton.addEventListener("click", function () {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: "importAnswers" });
+      }
+    });
+  });
+
   // 向当前标签页发送消息
   function sendMessage(message) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
