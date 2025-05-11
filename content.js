@@ -259,6 +259,21 @@ const Type = {
   4: "FILL_IN_THE_BLANK",
 };
 
+const res = {
+  name: "",
+  TRUE_OR_FALSE: {
+    type: "TRUE_OR_FALSE",
+    problems: [
+      {
+        id: "",
+        content: "",
+        options: [],
+        answers: [],
+      },
+    ],
+  },
+};
+
 function exportJson() {
   const problemSetId = window.location.pathname.split("/")[2];
   const targetUserId = JSON.parse(localStorage.getItem("user-cache")).userId;
@@ -281,6 +296,7 @@ function exportJson() {
       localStorage.setItem("examId", data.exam.id);
       localStorage.setItem("problemSetId", data.problemSet.id);
       localStorage.setItem("targetUserId", targetUserId);
+      localStorage.setItem("name", data.problemSet.name);
       getProblemSummaries();
     })
     .catch((error) => {
@@ -290,7 +306,9 @@ function exportJson() {
 }
 
 const getProblemSummaries = () => {
-  const result = {};
+  const result = {
+    name: localStorage.getItem("name"),
+  };
   fetch(
     `https://pintia.cn/api/problem-sets/${localStorage.getItem(
       "problemSetId"
@@ -341,6 +359,9 @@ function getProblemData(types, res) {
       });
   });
 }
+
+// 获取题目答案
+function getProblemAnswers() {}
 
 // 监听DOM变化，处理动态加载的元素
 const observer = new MutationObserver(function (mutations) {
