@@ -46,6 +46,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     case "importAnswers":
       importAnswers();
       break;
+    case "exportJson":
+      exportJson();
+      break;
   }
 
   // 返回确认消息
@@ -135,23 +138,23 @@ function exportAnswers() {
 function simulateFullInteraction(targetRadioInput, value) {
   // 先点击元素
   targetRadioInput.click();
-  
+
   // 修改值
   targetRadioInput.value = value;
-  
+
   // 触发额外的事件
   // 1. 触发 input 事件
-  const inputEvent = new Event('input', { bubbles: true });
+  const inputEvent = new Event("input", { bubbles: true });
   targetRadioInput.dispatchEvent(inputEvent);
-  
+
   // 2. 触发 change 事件
-  const changeEvent = new Event('change', { bubbles: true });
+  const changeEvent = new Event("change", { bubbles: true });
   targetRadioInput.dispatchEvent(changeEvent);
 }
 
 // 导入答题答案
 function importAnswers() {
-  // 获取目标元素 
+  // 获取目标元素
   const input = document.createElement("input");
   input.type = "file";
   input.accept = ".html";
@@ -169,24 +172,24 @@ function importAnswers() {
         'div[class*="flex"][class*="flex-col"][class*="h-[var(--height-exclude-header)]"][class*="overflow-auto"]'
       );
 
-      const Inputs = element.querySelectorAll('input');
-      const targetInputs = targetElement.querySelectorAll('input');
+      const Inputs = element.querySelectorAll("input");
+      const targetInputs = targetElement.querySelectorAll("input");
       for (let i = 0; i < Inputs.length; i++) {
-        if(Inputs[i].id===targetInputs[i].id)
-      { 
-        if(Inputs[i].checked!==targetInputs[i].checked&&Inputs[i].type==="radio")
-         {
-          targetInputs[i].click();
+        if (Inputs[i].id === targetInputs[i].id) {
+          if (
+            Inputs[i].checked !== targetInputs[i].checked &&
+            Inputs[i].type === "radio"
+          ) {
+            targetInputs[i].click();
+          } else if (
+            Inputs[i].checked !== targetInputs[i].checked &&
+            Inputs[i].type === "checkbox"
+          ) {
+            targetInputs[i].click();
+          } else if (Inputs[i].value !== targetInputs[i].value) {
+            simulateFullInteraction(targetInputs[i], Inputs[i].value);
+          }
         }
-        else if(Inputs[i].checked!==targetInputs[i].checked&&Inputs[i].type==="checkbox")
-         {
-          targetInputs[i].click();
-         }
-        else if(Inputs[i].value!==targetInputs[i].value)
-         {
-          simulateFullInteraction(targetInputs[i], Inputs[i].value);
-         }
-      }
       }
     };
     reader.readAsText(file);
@@ -194,25 +197,26 @@ function importAnswers() {
   input.click();
 }
 
-// 控制正确答案的可见性 
+// 控制正确答案的可见性
 function toggleRightVisibility(hide) {
   const parentElements = document.querySelectorAll(
     'div[class*="pc-x"][class*="pt-2"][class*="pl-4"][class*="scroll-mt-[calc(var(--height-header)+4rem+0.5rem)]"]'
   );
-    // 定义要查找的字符串
-    const targetString = '<span style="color: rgb(255, 59, 48);">答案正确</span>';
-  
-    // 存储结果的数组
-    const matchingElements = [];
-    
-    // 遍历每个父元素
-    parentElements.forEach(element => {
-      // 检查是否有包含目标字符串的input子元素
-      const input = element.querySelectorAll('div[class*="flex"][class*="items-start"][class*="space-x-4"]')[0];
-        if (input.innerHTML && input.innerHTML.includes(targetString)) {
-          matchingElements.push(element);
-        }
-      
+  // 定义要查找的字符串
+  const targetString = '<span style="color: rgb(255, 59, 48);">答案正确</span>';
+
+  // 存储结果的数组
+  const matchingElements = [];
+
+  // 遍历每个父元素
+  parentElements.forEach((element) => {
+    // 检查是否有包含目标字符串的input子元素
+    const input = element.querySelectorAll(
+      'div[class*="flex"][class*="items-start"][class*="space-x-4"]'
+    )[0];
+    if (input.innerHTML && input.innerHTML.includes(targetString)) {
+      matchingElements.push(element);
+    }
   });
   matchingElements.forEach(function (input) {
     input.style.display = hide ? "none" : "block";
@@ -246,6 +250,96 @@ function inlineStyles(element) {
 
   // 递归处理子元素
   Array.from(element.children).forEach((child) => inlineStyles(child));
+}
+
+const Type = {
+  1: "TRUE_OR_FALSE",
+  2: "MULTIPLE_CHOICE",
+  3: "MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER",
+  4: "FILL_IN_THE_BLANK",
+};
+
+function exportJson() {
+  const problemSetId = window.location.pathname.split("/")[2];
+  const targetUserId = JSON.parse(localStorage.getItem("user-cache")).userId;
+
+  fetch(`https://pintia.cn/api/problem-sets/${problemSetId}/exams`, {
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("获取题目统计信息出错");
+      }
+      // 不要在这里调用response.json()并打印
+      return response.json();
+    })
+    .then((data) => {
+      // 在这里打印解析后的数据
+      localStorage.setItem("examId", data.exam.id);
+      localStorage.setItem("problemSetId", data.problemSet.id);
+      localStorage.setItem("targetUserId", targetUserId);
+      getProblemSummaries();
+    })
+    .catch((error) => {
+      console.error("获取数据出错:", error);
+      alert("获取数据失败：" + error.message);
+    });
+}
+
+const getProblemSummaries = () => {
+  const result = {};
+  fetch(
+    `https://pintia.cn/api/problem-sets/${localStorage.getItem(
+      "problemSetId"
+    )}/problem-summaries`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    }
+  )
+    .then((response) => {
+      return response.json();
+    })
+    .then((data) => {
+      Object.keys(data.summaries).forEach((key) => {
+        result[key] = {
+          type: key,
+          peoblems: [],
+        };
+      });
+      console.log(result);
+      getProblemData(Object.keys(result), result);
+    });
+};
+
+// 处理每种题型的数据
+function getProblemData(types, res) {
+  const problemSetId = localStorage.getItem("problemSetId");
+  const examId = localStorage.getItem("examId");
+  const targetUserId = localStorage.getItem("targetUserId");
+  types.forEach((type) => {
+    fetch(
+      `https://pintia.cn/api/problem-sets/${problemSetId}/exam-problems?exam_id=${examId}&problem_type=${type}&target_user_id=${targetUserId}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+      }
+    )
+      .then((response) => {
+        return response.json();
+      })
+      .then((data) => {
+        res[type].problems = data.problemSetProblems;
+        console.log(res);
+      });
+  });
 }
 
 // 监听DOM变化，处理动态加载的元素

@@ -74,6 +74,15 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
+  // 导出JSON
+  const exportJsonButton = document.getElementById("exportJsonButton");
+  exportJsonButton.addEventListener("click", function () {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: "exportJson" });
+      }
+    });
+  });
   // 向当前标签页发送消息
   function sendMessage(message) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
