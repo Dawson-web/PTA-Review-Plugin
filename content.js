@@ -253,25 +253,10 @@ function inlineStyles(element) {
 }
 
 const Type = {
-  1: "TRUE_OR_FALSE",
-  2: "MULTIPLE_CHOICE",
-  3: "MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER",
-  4: "FILL_IN_THE_BLANK",
-};
-
-const res = {
-  name: "",
-  TRUE_OR_FALSE: {
-    type: "TRUE_OR_FALSE",
-    problems: [
-      {
-        id: "",
-        content: "",
-        options: [],
-        answers: [],
-      },
-    ],
-  },
+  TRUE_OR_FALSE: 1,
+  MULTIPLE_CHOICE: 2,
+  MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER: 3,
+  FILL_IN_THE_BLANK: 4,
 };
 
 function exportJson() {
@@ -327,10 +312,9 @@ const getProblemSummaries = () => {
       Object.keys(data.summaries).forEach((key) => {
         result[key] = {
           type: key,
-          peoblems: [],
+          problems: [],
         };
       });
-      console.log(result);
       getProblemData(Object.keys(result), result);
     });
 };
@@ -341,27 +325,100 @@ function getProblemData(types, res) {
   const examId = localStorage.getItem("examId");
   const targetUserId = localStorage.getItem("targetUserId");
   types.forEach((type) => {
-    fetch(
-      `https://pintia.cn/api/problem-sets/${problemSetId}/exam-problems?exam_id=${examId}&problem_type=${type}&target_user_id=${targetUserId}`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      }
-    )
-      .then((response) => {
-        return response.json();
-      })
-      .then((data) => {
-        res[type].problems = data.problemSetProblems;
-        console.log(res);
-      });
+    if (Type[type] && Type[type] <= 3) {
+      fetch(
+        `https://pintia.cn/api/problem-sets/${problemSetId}/exam-problems?exam_id=${examId}&problem_type=${type}&target_user_id=${targetUserId}`,
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      )
+        .then((response) => {
+          return response.json();
+        })
+        .then((data) => {
+          console.log(1, data);
+          let problemSetProblems = data.problemSetProblems.map((problem) => {
+            let options = null;
+            if (Type[type] === 1) {
+              options = ["TRUE", "FALSE"];
+            } else if (Type[type] === 2) {
+              options =
+                problem.problemConfig.multipleChoiceProblemConfig.choices;
+            } else if (Type[type] === 3) {
+              options =
+                problem.problemConfig
+                  .multipleChoiceMoreThanOneAnswerProblemConfig.choices;
+            }
+            return {
+              id: problem.id,
+              content: problem.content,
+              description: problem.description,
+              options: options,
+            };
+          });
+          const problemSetProblemsMap = new Map();
+          problemSetProblems.forEach((problem) => {
+            problemSetProblemsMap.set(problem.id, {
+              ...problem,
+              answers: [],
+            });
+          });
+          res[type].problems = problemSetProblemsMap;
+          getProblemAnswers(type, res);
+        });
+    }
   });
+  console.log(3, res);
 }
 
 // 获取题目答案
-function getProblemAnswers() {}
+function getProblemAnswers(type, res) {
+  const problemSetId = localStorage.getItem("problemSetId");
+  const examId = localStorage.getItem("examId");
+  const targetUserId = localStorage.getItem("targetUserId");
+  fetch(
+    `https://pintia.cn/api/exams/${examId}/problem-sets/${problemSetId}/last-submissions?problem_type=${type}&target_user_id=${targetUserId}`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    }
+  )
+    .then((response) => {
+      return response.json();
+    })
+    .then((data) => {
+      console.log(2, data);
+      data.submission.submissionDetails.forEach((submission, index) => {
+        if (Type[type] === 1) {
+          const answers = [submission.trueOrFalseSubmissionDetail.answer];
+          res[type].problems.set(submission.id, {
+            ...res[type].problems.get(submission.id),
+            answers: answers,
+          });
+        } else if (Type[type] === 2) {
+          const answers = [submission.multipleChoiceSubmissionDetail.answer];
+          res[type].problems.set(submission.id, {
+            ...res[type].problems.get(submission.id),
+            answers: answers,
+          });
+        } else if (Type[type] === 3) {
+          const answers = [
+            ...submission.multipleChoiceMoreThanOneAnswerSubmissionDetail
+              .answers,
+          ];
+          res[type].problems.set(submission.id, {
+            ...res[type].problems.get(submission.id),
+            answers: answers,
+          });
+        }
+      });
+    });
+}
 
 // 监听DOM变化，处理动态加载的元素
 const observer = new MutationObserver(function (mutations) {
