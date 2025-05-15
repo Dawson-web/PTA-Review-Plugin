@@ -2,7 +2,7 @@
 window.addEventListener("load", function () {
   // 检查是否需要应用已保存的设置
   chrome.storage.sync.get(
-    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs"],
+    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs", "hideText"],
     function (result) {
       if (result.hideRadio) {
         toggleRadioVisibility(true);
@@ -15,6 +15,9 @@ window.addEventListener("load", function () {
       }
       if (result.hideInputs) {
         toggleInputsVisibility(true);
+      }
+      if (result.hideText) {
+        toggleTextVisibility(true);
       }
     }
   );
@@ -37,6 +40,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     case "inputs":
       toggleInputsVisibility(message.hide);
       break;
+    case "text":
+      toggleTextVisibility(message.hide);
+      break;
     case "exportAnswers":
       exportAnswers();
       break;
@@ -47,7 +53,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       importAnswers();
       break;
     case "exportJson":
-      exportJson();
+      exportJson(2);
       break;
   }
 
@@ -90,6 +96,36 @@ function toggleInputsVisibility(hide) {
   });
 }
 
+const originData = new Map();
+function toggleTextVisibility(hide) {
+  const targetDivs = document.querySelectorAll("div.mt-4");
+  targetDivs.forEach(function (div) {
+    if (hide === true) {
+      console.log("hidetest");
+      if (!originData.has(div)) {
+        originData.set(div, div.innerHTML);
+        div.innerHTML = "";
+        reRenderPage();
+        console.log(originData.get(div));
+      }
+    } else {
+      console.log("1");
+      console.log(originData.get(div));
+      div.innerHTML = originData.get(div);
+      originData.delete(div);
+    }
+  });
+}
+
+async function reRenderPage() {
+  try {
+    // 等待exportJson完成并获取jsonString
+    const json = await exportJson(1);
+    console.log("重新做题时的JSON:", json);
+  } catch (error) {
+    console.error("渲染失败:", error);
+  }
+}
 // 导出答题记录
 function exportAnswers() {
   // 获取目标元素
@@ -259,98 +295,101 @@ const Type = {
   FILL_IN_THE_BLANK: 4,
 };
 
-function exportJson() {
+function exportJson(id = 1) {
   const problemSetId = window.location.pathname.split("/")[2];
   const targetUserId = JSON.parse(localStorage.getItem("user-cache")).userId;
-
-  fetch(`https://pintia.cn/api/problem-sets/${problemSetId}/exams`, {
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("获取题目统计信息出错");
+  const fetchExamData = async () => {
+    const examResponse = await fetch(
+      `https://pintia.cn/api/problem-sets/${problemSetId}/exams`,
+      {
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
       }
-      // 不要在这里调用response.json()并打印
-      return response.json();
-    })
-    .then((data) => {
-      // 在这里打印解析后的数据
-      localStorage.setItem("examId", data.exam.id);
-      localStorage.setItem("problemSetId", data.problemSet.id);
-      localStorage.setItem("targetUserId", targetUserId);
-      localStorage.setItem("name", data.problemSet.name);
-      getProblemSummaries();
-    })
-    .catch((error) => {
-      console.error("获取数据出错:", error);
-      alert("获取数据失败：" + error.message);
-    });
-}
+    );
+    if (!examResponse.ok) throw new Error("获取题目统计信息出错");
 
-const getProblemSummaries = () => {
-  const result = {
-    name: localStorage.getItem("name"),
+    const examData = await examResponse.json();
+    localStorage.setItem("examId", examData.exam.id);
+    localStorage.setItem("problemSetId", examData.problemSet.id);
+    localStorage.setItem("targetUserId", targetUserId);
+    localStorage.setItem("name", examData.problemSet.name);
+    return examData;
   };
-  const problemSetId = localStorage.getItem("problemSetId");
 
-  fetch(
-    `https://pintia.cn/api/problem-sets/${problemSetId}/problem-summaries`,
-    {
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-    }
-  )
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`获取题目摘要失败: ${response.statusText}`);
-      }
-      return response.json();
-    })
-    .then((data) => {
-      const types = Object.keys(data.summaries);
-      types.forEach((key) => {
-        result[key] = {
-          type: key,
-          problems: {}, // 初始化为空对象
-        };
+  // id=1：返回Promise（供reRenderPage使用）
+  if (id === 1) {
+    return fetchExamData()
+      .then(() => getProblemSummaries(id))
+      .catch((error) => {
+        console.error("id=1时出错:", error);
+        throw error;
       });
+  }
 
-      // 创建一个Promise数组来获取每种类型的数据
+  // id=2：直接下载（不返回Promise）
+  if (id === 2) {
+    fetchExamData()
+      .then(() => getProblemSummaries(id))
+      .catch((error) => {
+        console.error("id=2时出错:", error);
+        alert("下载失败：" + error.message);
+      });
+  }
+}
+const getProblemSummaries = (id) => {
+  return new Promise(async (resolve, reject) => {
+    // 改为返回Promise
+    const result = { name: localStorage.getItem("name") || "" };
+    const problemSetId = localStorage.getItem("problemSetId") || "";
+
+    try {
+      const summaryResponse = await fetch(
+        `https://pintia.cn/api/problem-sets/${problemSetId}/problem-summaries`,
+        {
+          headers: {
+            Accept: "application/json",
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      if (!summaryResponse.ok)
+        throw new Error(`摘要获取失败: ${summaryResponse.statusText}`);
+      const summaryData = await summaryResponse.json();
+
+      // 初始化题目类型
+      const types = Object.keys(summaryData.summaries);
+      types.forEach((key) => (result[key] = { type: key, problems: {} }));
       const promises = types.map((type) => getProblemData(type, result));
+      await Promise.all(promises);
 
-      // 等待所有Promise完成
-      return Promise.all(promises);
-    })
-    .then(() => {
-      // 所有数据获取并处理完毕后，生成并下载JSON
+      // 生成JSON（数据
       const jsonString = JSON.stringify(result, null, 2);
-      console.log("最终生成的 JSON:", jsonString);
 
-      const blob = new Blob([jsonString], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${result.name}.json`;
-      link.click();
-
-      // 清理
-      URL.revokeObjectURL(url);
+      // id=2时下载
+      if (id === 2) {
+        const blob = new Blob([jsonString], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${result.name}.json`;
+        link.click();
+        URL.revokeObjectURL(url);
+      }
       // 可以考虑清除localStorage中的临时项目
       // localStorage.removeItem("examId");
       // localStorage.removeItem("problemSetId");
       // localStorage.removeItem("targetUserId");
       // localStorage.removeItem("name");
-    })
-    .catch((error) => {
-      console.error("处理题目数据时出错:", error);
-      alert("导出 JSON 失败：" + error.message);
-    });
+
+      resolve(jsonString);
+    } catch (error) {
+      console.error("处理题目数据出错:", error);
+      if (id === 2) alert("导出 JSON 失败：" + error.message);
+      reject(error); // 传递错误
+    }
+  });
 };
 
 // 处理每种题型的数据
