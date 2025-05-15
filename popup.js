@@ -4,15 +4,16 @@ document.addEventListener("DOMContentLoaded", function () {
   const toggleCheckbox = document.getElementById("toggleCheckbox");
   const toggleResults = document.getElementById("toggleResults");
   const toggleInputs = document.getElementById("toggleInputs");
-
+  const toggleText = document.getElementById("toggleText");
   // 从存储中加载当前状态
   chrome.storage.sync.get(
-    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs"],
+    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs", "hideText"],
     function (result) {
       toggleRadio.checked = result.hideRadio || false;
       toggleCheckbox.checked = result.hideCheckbox || false;
       toggleResults.checked = result.hideResults || false;
       toggleInputs.checked = result.hideInputs || false;
+      toggleText.checked = result.hideText || false;
     }
   );
 
@@ -44,7 +45,12 @@ document.addEventListener("DOMContentLoaded", function () {
       sendMessage({ type: "inputs", hide: hideInputs });
     });
   });
-
+  toggleText.addEventListener("change", function () {
+    const hideText = toggleText.checked;
+    chrome.storage.sync.set({ hideText }, function () {
+      sendMessage({ type: "text", hide: hideText });
+    });
+  });
   // 添加导出按钮的点击事件处理
   const exportButton = document.getElementById("exportButton");
   exportButton.addEventListener("click", function () {
