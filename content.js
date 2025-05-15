@@ -1,3 +1,9 @@
+const Type = {
+  TRUE_OR_FALSE: 1,
+  MULTIPLE_CHOICE: 2,
+  MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER: 3,
+  FILL_IN_THE_BLANK: 4,
+};
 // 在页面加载完成后执行
 window.addEventListener("load", function () {
   // 检查是否需要应用已保存的设置
@@ -98,41 +104,107 @@ function toggleInputsVisibility(hide) {
 
 // 函数：处理答案提交的逻辑
 function handleSubmitAnswers(res) {
-  const allInputs = document.querySelectorAll("input");
-  const collectedAnswers = {};
-  console.log(res);
-
-  allInputs.forEach((input) => {
-    const id = input.id;
-    // 跳过没有ID的输入框，或者按钮本身（如果它也是input类型的话）
-    if (!id || input.id === "customSubmitAnswersButton") {
-      return;
-    }
-
-    let valueToCollect = null;
-    let shouldCollect = false;
-
-    if (input.type === "radio" || input.type === "checkbox") {
-      if (input.checked) {
-        valueToCollect = input.value;
-        shouldCollect = true;
+  const problemSetId = window.location.pathname.split("/")[2];
+  const type = window.location.pathname.split("/").pop();
+  const answers = JSON.parse(localStorage.getItem(problemSetId));
+  const errorAnswers = [];
+  switch (type) {
+    case "1": {
+      let index = 1;
+      const trueOrFalse = answers.TRUE_OR_FALSE.problems;
+      for (const [id, value] of res) {
+        // console.log(trueOrFalse[id], id, value);
+        console.log(trueOrFalse[id], value);
+        if (!trueOrFalse[id].answers.startsWith(value)) {
+          errorAnswers.push({
+            id: `R${type}-${index}`,
+            content: trueOrFalse[id].content,
+            answer: trueOrFalse[id].answers,
+            errorAnswer: value,
+          });
+        }
+        index++;
       }
-    } else {
-      // 对于其他类型的输入框（text, password, number, email, hidden 等）
-      // 直接收集它们的值
-      valueToCollect = input.value;
-      shouldCollect = true; // 即使值为空也收集，后续可以决定如何处理空字符串
+      break;
     }
+    case "2": {
+      const multipleChoice = answers.MULTIPLE_CHOICE.problems;
+      let index = 1;
+      for (const [id, value] of res) {
+        console.log(multipleChoice[id], value);
 
-    if (shouldCollect) {
-      if (!collectedAnswers[id]) {
-        collectedAnswers[id] = [];
+        if (multipleChoice[id].answers !== value) {
+          errorAnswers.push({
+            id: `R${type}-${index}`,
+            content: multipleChoice[id].content,
+            answer: multipleChoice[id].answers,
+            errorAnswer: value,
+          });
+        }
+        index++;
       }
-      collectedAnswers[id].push(valueToCollect);
+      break;
     }
-  });
+    case "3": {
+      const multipleChoiceMoreThanOneAnswer =
+        answers.MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER.problems;
+      let index = 1;
+      const res_ = new Map();
+      for (const [id, value] of res) {
+        if (!value) continue;
+        const baseId = id.split(".")[0];
+        if (res_.has(baseId)) {
+          res_.set(
+            baseId,
+            (res_.get(baseId) + value).split("").sort().join("")
+          );
+        } else {
+          res_.set(baseId, value);
+        }
+      }
+      for (const [id, value] of res_) {
+        const correctAnswer = multipleChoiceMoreThanOneAnswer[id].answers
+          .slice()
+          .sort()
+          .join("");
+        if (correctAnswer !== value) {
+          errorAnswers.push({
+            id: `R${type}-${index}`,
+            content: multipleChoiceMoreThanOneAnswer[id].content,
+            answer: multipleChoiceMoreThanOneAnswer[id].answers,
+            errorAnswer: value.split(""),
+          });
+        }
+        index++;
+      }
+      break;
+    }
+  }
 
-  console.log("提交的答案:", collectedAnswers);
+  // 根据 errorAnswers 显示结果
+  if (errorAnswers.length > 0) {
+    let htmlContent = "<h5>错题详情:</h5><ul>";
+    errorAnswers.forEach((err) => {
+      htmlContent += `<li style="margin-top: 10px;">
+        <strong>题目 ${err.id}:</strong> ${err.content.replace(
+        /<[^>]+>/g,
+        ""
+      )} <br>
+        <strong class="text-green-500">正确答案:</strong> ${
+          Array.isArray(err.answer) ? err.answer.join(", ") : err.answer
+        } <br>
+        <strong style="color: red;">你的答案:</strong> ${
+          Array.isArray(err.errorAnswer)
+            ? err.errorAnswer.join(", ")
+            : err.errorAnswer
+        }
+      </li>`;
+    });
+    htmlContent += "</ul>";
+    showModal(htmlContent);
+  } else {
+    showModal("<h5>恭喜你，全部答对！</h5>");
+  }
 }
 
 // 函数：创建并添加"汇总答案到控制台"按钮
@@ -165,7 +237,7 @@ function addSubmitAnswersButton(res) {
   document.body.appendChild(submitButton);
 }
 
-function selectOption(input) {
+function selectOption(input, value) {
   // Case 1: 判断题 (例如: <input ...>F)
   // "T" 或 "F" 是 input 元素的下一个兄弟文本节点
   if (input.nextSibling && input.nextSibling.nodeType === Node.TEXT_NODE) {
@@ -183,6 +255,12 @@ function selectOption(input) {
     if (span) {
       const spanText = span.textContent.trim();
       // 期望格式为 "A.", "B.", "C.", "D." 等
+      if (window.location.pathname.split("/").pop() === "3" && value) {
+        return null;
+      } else if (window.location.pathname.split("/").pop() === "3" && !value) {
+        return spanText.charAt(0);
+      }
+
       if (spanText.length > 0 && spanText.endsWith(".")) {
         return spanText.charAt(0); // 返回 "A", "B", "C", 或 "D"
       }
@@ -193,6 +271,72 @@ function selectOption(input) {
   // 如果以上规则都不匹配（例如，填空题或其他未知结构），则返回输入框的原始 value
   return input.value;
 }
+
+// --- 模态框相关函数 ---
+let modalElement = null; // 用于存储模态框元素
+
+function createModal() {
+  if (document.getElementById("ptaReviewModal")) {
+    modalElement = document.getElementById("ptaReviewModal");
+    return; // 如果模态框已存在，则不重复创建
+  }
+
+  modalElement = document.createElement("div");
+  modalElement.id = "ptaReviewModal";
+  modalElement.style.display = "none"; // 默认隐藏
+  modalElement.style.position = "fixed";
+  modalElement.style.zIndex = "10001"; // 比提交按钮高一级
+  modalElement.style.left = "50%";
+  modalElement.style.top = "50%";
+  modalElement.style.transform = "translate(-50%, -50%)";
+  modalElement.style.width = "80%";
+  modalElement.style.maxWidth = "600px";
+  modalElement.style.maxHeight = "80vh";
+  modalElement.style.overflowY = "auto";
+  modalElement.style.backgroundColor = "white";
+  modalElement.style.padding = "20px";
+  modalElement.style.border = "1px solid #ccc";
+  modalElement.style.borderRadius = "8px";
+  modalElement.style.boxShadow = "0 4px 8px rgba(0,0,0,0.1)";
+
+  const closeButton = document.createElement("button");
+  closeButton.textContent = "×";
+  closeButton.style.position = "absolute";
+  closeButton.style.top = "10px";
+  closeButton.style.right = "15px";
+  closeButton.style.fontSize = "20px";
+  closeButton.style.border = "none";
+  closeButton.style.background = "none";
+  closeButton.style.cursor = "pointer";
+  closeButton.onclick = closeModal;
+
+  const modalContent = document.createElement("div");
+  modalContent.id = "ptaReviewModalContent";
+
+  modalElement.appendChild(closeButton);
+  modalElement.appendChild(modalContent);
+  document.body.appendChild(modalElement);
+}
+
+function showModal(htmlContent) {
+  if (!modalElement) {
+    createModal();
+  }
+  const modalContentElement = document.getElementById("ptaReviewModalContent");
+  if (modalContentElement) {
+    modalContentElement.innerHTML = htmlContent;
+  }
+  if (modalElement) {
+    modalElement.style.display = "block";
+  }
+}
+
+function closeModal() {
+  if (modalElement) {
+    modalElement.style.display = "none";
+  }
+}
+// --- 结束模态框相关函数 ---
 
 function toggleTextVisibility() {
   const res = new Map();
@@ -206,7 +350,10 @@ function toggleTextVisibility() {
     input.style.cursor = "default";
     input.addEventListener("click", function (e) {
       console.log("click");
-      res.set(input.getAttribute("name"), selectOption(input));
+      res.set(
+        input.getAttribute("name"),
+        selectOption(input, res.get(input.getAttribute("name")))
+      );
       console.log(res);
       e.stopPropagation();
     });
@@ -386,13 +533,6 @@ function inlineStyles(element) {
   Array.from(element.children).forEach((child) => inlineStyles(child));
 }
 
-const Type = {
-  TRUE_OR_FALSE: 1,
-  MULTIPLE_CHOICE: 2,
-  MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER: 3,
-  FILL_IN_THE_BLANK: 4,
-};
-
 function exportJson(id = 1) {
   const problemSetId = window.location.pathname.split("/")[2];
   const targetUserId = JSON.parse(localStorage.getItem("user-cache")).userId;
@@ -436,6 +576,7 @@ function exportJson(id = 1) {
       });
   }
 }
+
 const getProblemSummaries = (id) => {
   return new Promise(async (resolve, reject) => {
     // 改为返回Promise
@@ -462,24 +603,29 @@ const getProblemSummaries = (id) => {
       const promises = types.map((type) => getProblemData(type, result));
       await Promise.all(promises);
 
+      console.log(result);
       // 生成JSON（数据
+      localStorage.removeItem("examId");
+      localStorage.removeItem("problemSetId");
+      localStorage.removeItem("targetUserId");
+      localStorage.removeItem("name");
+
+      localStorage.setItem(problemSetId, JSON.stringify(result));
+
       const jsonString = JSON.stringify(result, null, 2);
 
-      // id=2时下载
-      if (id === 2) {
-        const blob = new Blob([jsonString], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${result.name}.json`;
-        link.click();
-        URL.revokeObjectURL(url);
-      }
+      // // id=2时下载
+      // if (id === 2) {
+      //   const blob = new Blob([jsonString], { type: "application/json" });
+      //   const url = URL.createObjectURL(blob);
+      //   const link = document.createElement("a");
+      //   link.href = url;
+      //   link.download = `${result.name}.json`;
+      //   link.click();
+      //   URL.revokeObjectURL(url);
+      // }
+
       // 可以考虑清除localStorage中的临时项目
-      // localStorage.removeItem("examId");
-      // localStorage.removeItem("problemSetId");
-      // localStorage.removeItem("targetUserId");
-      // localStorage.removeItem("name");
 
       resolve(jsonString);
     } catch (error) {
