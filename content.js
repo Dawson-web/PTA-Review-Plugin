@@ -96,24 +96,122 @@ function toggleInputsVisibility(hide) {
   });
 }
 
-const originData = new Map();
-function toggleTextVisibility(hide) {
-  const targetDivs = document.querySelectorAll("div.mt-4");
-  targetDivs.forEach(function (div) {
-    if (hide === true) {
-      console.log("hidetest");
-      if (!originData.has(div)) {
-        originData.set(div, div.innerHTML);
-        div.innerHTML = "";
-        reRenderPage();
-        console.log(originData.get(div));
+// 函数：处理答案提交的逻辑
+function handleSubmitAnswers(res) {
+  const allInputs = document.querySelectorAll("input");
+  const collectedAnswers = {};
+  console.log(res);
+
+  allInputs.forEach((input) => {
+    const id = input.id;
+    // 跳过没有ID的输入框，或者按钮本身（如果它也是input类型的话）
+    if (!id || input.id === "customSubmitAnswersButton") {
+      return;
+    }
+
+    let valueToCollect = null;
+    let shouldCollect = false;
+
+    if (input.type === "radio" || input.type === "checkbox") {
+      if (input.checked) {
+        valueToCollect = input.value;
+        shouldCollect = true;
       }
     } else {
-      console.log("1");
-      console.log(originData.get(div));
-      div.innerHTML = originData.get(div);
-      originData.delete(div);
+      // 对于其他类型的输入框（text, password, number, email, hidden 等）
+      // 直接收集它们的值
+      valueToCollect = input.value;
+      shouldCollect = true; // 即使值为空也收集，后续可以决定如何处理空字符串
     }
+
+    if (shouldCollect) {
+      if (!collectedAnswers[id]) {
+        collectedAnswers[id] = [];
+      }
+      collectedAnswers[id].push(valueToCollect);
+    }
+  });
+
+  console.log("提交的答案:", collectedAnswers);
+}
+
+// 函数：创建并添加"汇总答案到控制台"按钮
+function addSubmitAnswersButton(res) {
+  // 检查按钮是否已存在，防止重复添加
+  if (document.getElementById("customSubmitAnswersButton")) {
+    return;
+  }
+
+  const submitButton = document.createElement("button");
+  submitButton.id = "customSubmitAnswersButton";
+  submitButton.textContent = "提交答案";
+  // 按钮样式
+  submitButton.style.position = "fixed";
+  submitButton.style.bottom = "20px";
+  submitButton.style.right = "20px";
+  submitButton.style.padding = "10px 15px";
+  submitButton.style.backgroundColor = "#007bff"; // blue
+  submitButton.style.color = "white";
+  submitButton.style.border = "none";
+  submitButton.style.borderRadius = "5px";
+  submitButton.style.cursor = "pointer";
+  submitButton.style.zIndex = "10000"; // 确保按钮在顶层显示
+  submitButton.style.fontSize = "14px";
+
+  submitButton.addEventListener("click", () => {
+    handleSubmitAnswers(res);
+  });
+
+  document.body.appendChild(submitButton);
+}
+
+function selectOption(input) {
+  // Case 1: 判断题 (例如: <input ...>F)
+  // "T" 或 "F" 是 input 元素的下一个兄弟文本节点
+  if (input.nextSibling && input.nextSibling.nodeType === Node.TEXT_NODE) {
+    const textContent = input.nextSibling.textContent.trim();
+    if (textContent === "T" || textContent === "F") {
+      return textContent; // 返回 "T" 或 "F"
+    }
+  }
+
+  // Case 2 & 3: 单选题或多选题 (例如: <input ...><div...><span>C.</span>...</div>)
+  // 选项标识在 input 元素的下一个兄弟元素的第一个 span 标签内
+  const nextElement = input.nextElementSibling;
+  if (nextElement) {
+    const span = nextElement.querySelector("span"); // 查找 div 内的第一个 span
+    if (span) {
+      const spanText = span.textContent.trim();
+      // 期望格式为 "A.", "B.", "C.", "D." 等
+      if (spanText.length > 0 && spanText.endsWith(".")) {
+        return spanText.charAt(0); // 返回 "A", "B", "C", 或 "D"
+      }
+    }
+  }
+
+  // console.warn(`selectOption: 未能为输入框 (name: ${input.name}, id: ${input.id}) 确定特定标签。将返回其value。`);
+  // 如果以上规则都不匹配（例如，填空题或其他未知结构），则返回输入框的原始 value
+  return input.value;
+}
+
+function toggleTextVisibility() {
+  const res = new Map();
+  addSubmitAnswersButton(res);
+  const allInputs = document.querySelectorAll("input"); // 更名以反映其选择所有input
+  allInputs.forEach(function (input) {
+    res.set(input.getAttribute("name"), null);
+    input.removeAttribute("disabled");
+    input.checked = false; // 显式取消选中状态
+    input.removeAttribute("aria-label");
+    input.style.cursor = "default";
+    input.addEventListener("click", function (e) {
+      console.log("click");
+      res.set(input.getAttribute("name"), selectOption(input));
+      console.log(res);
+      e.stopPropagation();
+    });
+
+    input.parentElement.style.cursor = "default";
   });
 }
 
@@ -541,7 +639,7 @@ function getProblemAnswers(type, res) {
 // 监听DOM变化，处理动态加载的元素
 const observer = new MutationObserver(function (mutations) {
   chrome.storage.sync.get(
-    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs"],
+    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs", "hideText"],
     function (result) {
       if (result.hideRadio) {
         toggleRadioVisibility(true);
@@ -554,6 +652,9 @@ const observer = new MutationObserver(function (mutations) {
       }
       if (result.hideInputs) {
         toggleInputsVisibility(true);
+      }
+      if (result.hideText) {
+        toggleTextVisibility(true);
       }
     }
   );
