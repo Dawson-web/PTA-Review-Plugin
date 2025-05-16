@@ -59,7 +59,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       importAnswers();
       break;
     case "exportJson":
-      exportJson(2);
+      exportJson();
       break;
   }
 
@@ -340,6 +340,12 @@ function closeModal() {
 
 function toggleTextVisibility() {
   const res = new Map();
+  const problemSetId = window.location.pathname.split("/")[2];
+
+  if (!localStorage.getItem(problemSetId)) {
+    exportJson();
+  }
+
   addSubmitAnswersButton(res);
   const allInputs = document.querySelectorAll("input"); // 更名以反映其选择所有input
   allInputs.forEach(function (input) {
@@ -365,7 +371,7 @@ function toggleTextVisibility() {
 async function reRenderPage() {
   try {
     // 等待exportJson完成并获取jsonString
-    const json = await exportJson(1);
+    const json = await exportJson();
     console.log("重新做题时的JSON:", json);
   } catch (error) {
     console.error("渲染失败:", error);
@@ -533,107 +539,329 @@ function inlineStyles(element) {
   Array.from(element.children).forEach((child) => inlineStyles(child));
 }
 
-function exportJson(id = 1) {
+// function exportJson(id = 1) {
+//   const problemSetId = window.location.pathname.split("/")[2];
+//   const targetUserId = JSON.parse(localStorage.getItem("user-cache")).userId;
+//   const fetchExamData = async () => {
+//     const examResponse = await fetch(
+//       `https://pintia.cn/api/problem-sets/${problemSetId}/exams`,
+//       {
+//         headers: {
+//           Accept: "application/json",
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
+//     if (!examResponse.ok) throw new Error("获取题目统计信息出错");
+
+//     const examData = await examResponse.json();
+//     localStorage.setItem("examId", examData.exam.id);
+//     localStorage.setItem("problemSetId", examData.problemSet.id);
+//     localStorage.setItem("targetUserId", targetUserId);
+//     localStorage.setItem("name", examData.problemSet.name);
+//     return examData;
+//   };
+
+//   // id=1：返回Promise（供reRenderPage使用）
+//   if (id === 1) {
+//     return fetchExamData()
+//       .then(() => getProblemSummaries(id))
+//       .catch((error) => {
+//         console.error("id=1时出错:", error);
+//         throw error;
+//       });
+//   }
+
+//   // id=2：直接下载（不返回Promise）
+//   if (id === 2) {
+//     fetchExamData()
+//       .then(() => getProblemSummaries(id))
+//       .catch((error) => {
+//         console.error("id=2时出错:", error);
+//         alert("下载失败：" + error.message);
+//       });
+//   }
+// }
+
+// const getProblemSummaries = (id) => {
+//   return new Promise(async (resolve, reject) => {
+//     // 改为返回Promise
+//     const result = { name: localStorage.getItem("name") || "" };
+//     const problemSetId = localStorage.getItem("problemSetId") || "";
+
+//     try {
+//       const summaryResponse = await fetch(
+//         `https://pintia.cn/api/problem-sets/${problemSetId}/problem-summaries`,
+//         {
+//           headers: {
+//             Accept: "application/json",
+//             "Content-Type": "application/json",
+//           },
+//         }
+//       );
+//       if (!summaryResponse.ok)
+//         throw new Error(`摘要获取失败: ${summaryResponse.statusText}`);
+//       const summaryData = await summaryResponse.json();
+
+//       // 初始化题目类型
+//       const types = Object.keys(summaryData.summaries);
+//       types.forEach((key) => (result[key] = { type: key, problems: {} }));
+//       const promises = types.map((type) => getProblemData(type, result));
+//       await Promise.all(promises);
+
+//       console.log(result);
+//       // 生成JSON（数据
+//       localStorage.removeItem("examId");
+//       localStorage.removeItem("problemSetId");
+//       localStorage.removeItem("targetUserId");
+//       localStorage.removeItem("name");
+
+//       localStorage.setItem(problemSetId, JSON.stringify(result));
+
+//       const jsonString = JSON.stringify(result, null, 2);
+
+//       // // id=2时下载
+//       // if (id === 2) {
+//       //   const blob = new Blob([jsonString], { type: "application/json" });
+//       //   const url = URL.createObjectURL(blob);
+//       //   const link = document.createElement("a");
+//       //   link.href = url;
+//       //   link.download = `${result.name}.json`;
+//       //   link.click();
+//       //   URL.revokeObjectURL(url);
+//       // }
+
+//       // 可以考虑清除localStorage中的临时项目
+
+//       resolve(jsonString);
+//     } catch (error) {
+//       console.error("处理题目数据出错:", error);
+//       if (id === 2) alert("导出 JSON 失败：" + error.message);
+//       reject(error); // 传递错误
+//     }
+//   });
+// };
+
+// // 处理每种题型的数据
+// function getProblemData(type, res) {
+//   return new Promise((resolve, reject) => {
+//     const problemSetId = localStorage.getItem("problemSetId");
+//     const examId = localStorage.getItem("examId");
+//     const targetUserId = localStorage.getItem("targetUserId");
+
+//     // 只处理类型 1, 2, 3
+//     if (Type[type] && Type[type] <= 3) {
+//       fetch(
+//         `https://pintia.cn/api/problem-sets/${problemSetId}/exam-problems?exam_id=${examId}&problem_type=${type}&target_user_id=${targetUserId}`,
+//         {
+//           headers: {
+//             Accept: "application/json",
+//             "Content-Type": "application/json",
+//           },
+//         }
+//       )
+//         .then((response) => {
+//           if (!response.ok) {
+//             throw new Error(
+//               `获取 ${type} 类型题目失败: ${response.statusText}`
+//             );
+//           }
+//           return response.json();
+//         })
+//         .then((data) => {
+//           res[type].problems = {}; // 初始化为对象
+//           data.problemSetProblems.forEach((problem) => {
+//             let options = null;
+//             if (Type[type] === 1) {
+//               options = ["TRUE", "FALSE"];
+//             } else if (Type[type] === 2) {
+//               options =
+//                 problem.problemConfig.multipleChoiceProblemConfig.choices;
+//             } else if (Type[type] === 3) {
+//               options =
+//                 problem.problemConfig
+//                   .multipleChoiceMoreThanOneAnswerProblemConfig.choices;
+//             }
+//             // 使用 problem.id 作为键
+//             res[type].problems[problem.id] = {
+//               id: problem.id,
+//               content: problem.content,
+//               description: problem.description,
+//               options: options,
+//               answers: [], // 初始化答案数组
+//             };
+//           });
+//           // 获取答案并返回 Promise
+//           return getProblemAnswers(type, res);
+//         })
+//         .then(resolve) // 当 getProblemAnswers 完成时，解决此 Promise
+//         .catch(reject); // 捕获此链中的任何错误
+//     } else {
+//       // 对于其他类型，直接解决 Promise
+//       console.log(`跳过类型 ${type} 的题目获取`);
+//       resolve();
+//     }
+//   });
+// }
+
+// // 获取题目答案
+// function getProblemAnswers(type, res) {
+//   return new Promise((resolve, reject) => {
+//     const problemSetId = localStorage.getItem("problemSetId");
+//     const examId = localStorage.getItem("examId");
+//     const targetUserId = localStorage.getItem("targetUserId");
+
+//     // 确保 res[type].problems 确实是一个对象
+//     if (
+//       !res[type] ||
+//       typeof res[type].problems !== "object" ||
+//       res[type].problems === null
+//     ) {
+//       console.warn(`类型 ${type} 的 problems 结构不正确，跳过获取答案。`);
+//       return resolve(); // 或者 reject，取决于你希望如何处理这种情况
+//     }
+
+//     fetch(
+//       `https://pintia.cn/api/exams/${examId}/problem-sets/${problemSetId}/last-submissions?problem_type=${type}&target_user_id=${targetUserId}`,
+//       {
+//         headers: {
+//           Accept: "application/json",
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     )
+//       .then((response) => {
+//         if (!response.ok) {
+//           // 即使获取答案失败，也可能需要 resolve，以免阻塞 Promise.all
+//           console.warn(`获取 ${type} 类型答案失败: ${response.statusText}`);
+//           return null; // 返回 null 或空对象，表示没有获取到答案
+//         }
+//         return response.json();
+//       })
+//       .then((data) => {
+//         if (data && data.submission && data.submission.submissionDetails) {
+//           data.submission.submissionDetails.forEach((submission) => {
+//             const problemId = submission.problemSetProblemId;
+//             let answers = [];
+//             if (Type[type] === 1) {
+//               answers = submission.trueOrFalseSubmissionDetail?.answer || [];
+//             } else if (Type[type] === 2) {
+//               answers = submission.multipleChoiceSubmissionDetail?.answer || [];
+//             } else if (Type[type] === 3) {
+//               answers =
+//                 submission.multipleChoiceMoreThanOneAnswerSubmissionDetail
+//                   ?.answers || [];
+//             }
+
+//             // 检查 res[type].problems 中是否存在对应的 problemId
+//             if (res[type].problems[problemId]) {
+//               res[type].problems[problemId].answers = answers;
+//             } else {
+//               console.warn(
+//                 `在 res 中未找到题目 ID: ${problemId} (类型: ${type})，无法添加答案。`
+//               );
+//             }
+//           });
+//         }
+
+//         // 移除旧的 Map 转 Array 的逻辑
+//         // if (
+//         //   Object.keys(res)
+//         //     .filter((k) => k !== "name")
+//         //     .every((k) => res[k].problems instanceof Map)
+//         // ) {
+//         //   Object.keys(res).forEach((key) => {
+//         //     if (key !== "name" && res[key].problems instanceof Map) {
+//         //       res[key].problems = Array.from(res[key].problems.values());
+//         //     }
+//         //   });
+//         // }
+
+//         resolve(); // 成功获取并处理完答案
+//       })
+//       .catch((error) => {
+//         console.error(`获取 ${type} 类型答案时出错:`, error);
+//         // 即使出错，也 resolve，避免阻塞 Promise.all
+//         // 或者可以根据需要 reject
+//         resolve();
+//       });
+//   });
+// }
+
+
+function exportJson() {
   const problemSetId = window.location.pathname.split("/")[2];
   const targetUserId = JSON.parse(localStorage.getItem("user-cache")).userId;
-  const fetchExamData = async () => {
-    const examResponse = await fetch(
-      `https://pintia.cn/api/problem-sets/${problemSetId}/exams`,
-      {
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
+
+  fetch(`https://pintia.cn/api/problem-sets/${problemSetId}/exams`, {
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("获取题目统计信息出错");
       }
-    );
-    if (!examResponse.ok) throw new Error("获取题目统计信息出错");
-
-    const examData = await examResponse.json();
-    localStorage.setItem("examId", examData.exam.id);
-    localStorage.setItem("problemSetId", examData.problemSet.id);
-    localStorage.setItem("targetUserId", targetUserId);
-    localStorage.setItem("name", examData.problemSet.name);
-    return examData;
-  };
-
-  // id=1：返回Promise（供reRenderPage使用）
-  if (id === 1) {
-    return fetchExamData()
-      .then(() => getProblemSummaries(id))
-      .catch((error) => {
-        console.error("id=1时出错:", error);
-        throw error;
-      });
-  }
-
-  // id=2：直接下载（不返回Promise）
-  if (id === 2) {
-    fetchExamData()
-      .then(() => getProblemSummaries(id))
-      .catch((error) => {
-        console.error("id=2时出错:", error);
-        alert("下载失败：" + error.message);
-      });
-  }
+      // 不要在这里调用response.json()并打印
+      return response.json();
+    })
+    .then((data) => {
+      // 在这里打印解析后的数据
+      localStorage.setItem("examId", data.exam.id);
+      localStorage.setItem("problemSetId", data.problemSet.id);
+      localStorage.setItem("targetUserId", targetUserId);
+      localStorage.setItem("name", data.problemSet.name);
+      getProblemSummaries();
+    })
+    .catch((error) => {
+      console.error("获取数据出错:", error);
+      // alert("获取数据失败：" + error.message);
+    });
 }
 
-const getProblemSummaries = (id) => {
-  return new Promise(async (resolve, reject) => {
-    // 改为返回Promise
-    const result = { name: localStorage.getItem("name") || "" };
-    const problemSetId = localStorage.getItem("problemSetId") || "";
+const getProblemSummaries = () => {
+  const result = {
+    name: localStorage.getItem("name"),
+  };
+  const problemSetId = localStorage.getItem("problemSetId");
 
-    try {
-      const summaryResponse = await fetch(
-        `https://pintia.cn/api/problem-sets/${problemSetId}/problem-summaries`,
-        {
-          headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (!summaryResponse.ok)
-        throw new Error(`摘要获取失败: ${summaryResponse.statusText}`);
-      const summaryData = await summaryResponse.json();
-
-      // 初始化题目类型
-      const types = Object.keys(summaryData.summaries);
-      types.forEach((key) => (result[key] = { type: key, problems: {} }));
-      const promises = types.map((type) => getProblemData(type, result));
-      await Promise.all(promises);
-
-      console.log(result);
-      // 生成JSON（数据
-      localStorage.removeItem("examId");
-      localStorage.removeItem("problemSetId");
-      localStorage.removeItem("targetUserId");
-      localStorage.removeItem("name");
-
-      localStorage.setItem(problemSetId, JSON.stringify(result));
-
-      const jsonString = JSON.stringify(result, null, 2);
-
-      // // id=2时下载
-      // if (id === 2) {
-      //   const blob = new Blob([jsonString], { type: "application/json" });
-      //   const url = URL.createObjectURL(blob);
-      //   const link = document.createElement("a");
-      //   link.href = url;
-      //   link.download = `${result.name}.json`;
-      //   link.click();
-      //   URL.revokeObjectURL(url);
-      // }
-
-      // 可以考虑清除localStorage中的临时项目
-
-      resolve(jsonString);
-    } catch (error) {
-      console.error("处理题目数据出错:", error);
-      if (id === 2) alert("导出 JSON 失败：" + error.message);
-      reject(error); // 传递错误
+  fetch(
+    `https://pintia.cn/api/problem-sets/${problemSetId}/problem-summaries`,
+    {
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
     }
-  });
+  )
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`获取题目摘要失败: ${response.statusText}`);
+      }
+      return response.json();
+    })
+    .then((data) => {
+      const types = Object.keys(data.summaries);
+      types.forEach((key) => {
+        result[key] = {
+          type: key,
+          problems: {}, // 初始化为空对象
+        };
+      });
+
+      // 创建一个Promise数组来获取每种类型的数据
+      const promises = types.map((type) => getProblemData(type, result));
+
+      // 等待所有Promise完成
+      return Promise.all(promises);
+    })
+    .then(() => {
+      localStorage.setItem(problemSetId, JSON.stringify(result));
+    })
+    .catch((error) => {
+      console.error("处理题目数据时出错:", error);
+    });
 };
 
 // 处理每种题型的数据
@@ -781,6 +1009,7 @@ function getProblemAnswers(type, res) {
       });
   });
 }
+
 
 // 监听DOM变化，处理动态加载的元素
 const observer = new MutationObserver(function (mutations) {
