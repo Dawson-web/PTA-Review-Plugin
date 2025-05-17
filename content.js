@@ -1126,6 +1126,7 @@ function showAnswerEditForm(type, problemId) {
   // 添加保存按钮的事件监听器
   document.getElementById("save-answer-btn").addEventListener("click", () => {
     saveEditedAnswer(type, problemId);
+    window.location.reload();
   });
 }
 
@@ -1141,13 +1142,13 @@ function generateAnswerOptionsHtml(type, problem) {
               <div style="display: flex; gap: 20px;">
                   <label style="display: flex; align-items: center; gap: 8px;">
                       <input type="radio" name="answer" value="T" ${
-                        currentAnswer.includes("TRUE") ? "checked" : ""
+                        currentAnswer[0].startsWith("T") ? "checked" : ""
                       }>
                       <span>正确</span>
                   </label>
                   <label style="display: flex; align-items: center; gap: 8px;">
                       <input type="radio" name="answer" value="F" ${
-                        currentAnswer.includes("FALSE") ? "checked" : ""
+                        currentAnswer[0].startsWith("F") ? "checked" : ""
                       }>
                       <span>错误</span>
                   </label>
