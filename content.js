@@ -72,6 +72,9 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     case "exportJson":
       exportJson(2);
       break;
+    case "editAnswers":
+      createAnswerEditModal();
+      break;
   }
 
   // 返回确认消息
@@ -963,6 +966,290 @@ const observer = new MutationObserver(function (mutations) {
     }
   );
 });
+
+function createAnswerEditModal() {
+  const problemSetId = window.location.pathname.split("/")[2];
+  const answers = JSON.parse(localStorage.getItem(problemSetId));
+
+  if (!answers) {
+    showModal("<h5>未找到答案数据</h5>");
+    return;
+  }
+
+  const modalContent = `
+      <div class="answer-edit-container" style="
+          display: flex;
+          height: 80vh;
+          width: 100%;
+          gap: 20px;
+      ">
+          <!-- 左侧题目列表 -->
+          <div class="question-list-container" style="
+              flex: 1;
+              overflow-y: auto;
+              padding: 10px;
+              border-right: 1px solid #eee;
+          ">
+              <h4 style="margin-bottom: 16px;">题目列表</h4>
+              ${generateQuestionListHtml(answers)}
+          </div>
+
+          <!-- 右侧答案修正区 -->
+          <div class="answer-edit-area" style="
+              flex: 1;
+              overflow-y: auto;
+              padding: 10px;
+          ">
+              <div id="answer-edit-content">
+                  <h4>请选择左侧题目进行修改</h4>
+              </div>
+          </div>
+      </div>
+  `;
+
+  showModal(modalContent);
+  addQuestionListEventListeners();
+}
+
+function generateQuestionListHtml(answers) {
+  let html = "";
+  const typeNames = {
+    TRUE_OR_FALSE: "判断题",
+    MULTIPLE_CHOICE: "单选题",
+    MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER: "多选题",
+  };
+
+  Object.entries(answers).forEach(([type, data]) => {
+    if (
+      type !== "name" &&
+      data.problems &&
+      Object.keys(data.problems).length > 0
+    ) {
+      html += `
+              <div class="question-type-section">
+                  <h5 style="margin: 10px 0;">${typeNames[type] || type}</h5>
+                  <div class="questions">
+          `;
+
+      Object.entries(data.problems).forEach(([problemId, problem], index) => {
+        const content =
+          problem.content.replace(/<[^>]+>/g, "").substring(0, 50) + "...";
+        html += `
+                  <div class="question-item" 
+                       data-type="${type}" 
+                       data-problem-id="${problemId}"
+                       style="
+                          padding: 8px;
+                          margin: 4px 0;
+                          cursor: pointer;
+                          border: 1px solid #eee;
+                          border-radius: 4px;
+                          transition: background-color 0.2s;
+                       ">
+                      第${index + 1}题: ${content}
+                  </div>
+              `;
+      });
+
+      html += `
+                  </div>
+              </div>
+          `;
+    }
+  });
+
+  return html;
+}
+
+function addQuestionListEventListeners() {
+  document.querySelectorAll(".question-item").forEach((item) => {
+    item.addEventListener("click", function () {
+      const type = this.dataset.type;
+      const problemId = this.dataset.problemId;
+      showAnswerEditForm(type, problemId);
+
+      // 移除其他项目的选中状态
+      document
+        .querySelectorAll(".question-item")
+        .forEach((q) => (q.style.backgroundColor = ""));
+      // 设置当前项目的选中状态
+      this.style.backgroundColor = "#f0f0f0";
+    });
+
+    // 添加悬停效果
+    item.addEventListener("mouseover", function () {
+      if (this.style.backgroundColor !== "rgb(240, 240, 240)") {
+        this.style.backgroundColor = "#f8f8f8";
+      }
+    });
+
+    item.addEventListener("mouseout", function () {
+      if (this.style.backgroundColor !== "rgb(240, 240, 240)") {
+        this.style.backgroundColor = "";
+      }
+    });
+  });
+}
+
+function showAnswerEditForm(type, problemId) {
+  const problemSetId = window.location.pathname.split("/")[2];
+  const answers = JSON.parse(localStorage.getItem(problemSetId));
+  const problem = answers[type].problems[problemId];
+
+  const editContent = document.getElementById("answer-edit-content");
+  let formHtml = `
+      <h4>题目内容</h4>
+      <div style="margin: 10px 0; padding: 10px; background: #f8f8f8; border-radius: 4px;">
+          ${problem.content}
+      </div>
+      <h4>修改答案</h4>
+      <form id="answer-edit-form" style="margin: 10px 0;">
+          ${generateAnswerOptionsHtml(type, problem)}
+          <button type="button" 
+                  id="save-answer-btn"
+                  style="
+                      margin-top: 20px;
+                      padding: 8px 16px;
+                      background: #4f46e5;
+                      color: white;
+                      border: none;
+                      border-radius: 4px;
+                      cursor: pointer;
+                  ">
+              保存修改
+          </button>
+      </form>
+  `;
+
+  editContent.innerHTML = formHtml;
+
+  // 添加保存按钮的事件监听器
+  document.getElementById("save-answer-btn").addEventListener("click", () => {
+    saveEditedAnswer(type, problemId);
+  });
+}
+
+function generateAnswerOptionsHtml(type, problem) {
+  let html = "";
+  const currentAnswer = Array.isArray(problem.answers)
+    ? problem.answers
+    : [problem.answers];
+
+  switch (type) {
+    case "TRUE_OR_FALSE":
+      html = `
+              <div style="display: flex; gap: 20px;">
+                  <label style="display: flex; align-items: center; gap: 8px;">
+                      <input type="radio" name="answer" value="T" ${
+                        currentAnswer.includes("TRUE") ? "checked" : ""
+                      }>
+                      <span>正确</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px;">
+                      <input type="radio" name="answer" value="F" ${
+                        currentAnswer.includes("FALSE") ? "checked" : ""
+                      }>
+                      <span>错误</span>
+                  </label>
+              </div>
+          `;
+      break;
+
+    case "MULTIPLE_CHOICE":
+      html = problem.options
+        .map(
+          (option, index) => `
+              <div style="margin: 8px 0;">
+                  <label style="display: flex; align-items: center; gap: 8px;">
+                      <input type="radio" 
+                             name="answer" 
+                             value="${String.fromCharCode(65 + index)}"
+                             ${
+                               currentAnswer.includes(
+                                 String.fromCharCode(65 + index)
+                               )
+                                 ? "checked"
+                                 : ""
+                             }>
+                      <span>${option}</span>
+                  </label>
+              </div>
+          `
+        )
+        .join("");
+      break;
+
+    case "MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER":
+      html = problem.options
+        .map(
+          (option, index) => `
+              <div style="margin: 8px 0;">
+                  <label style="display: flex; align-items: center; gap: 8px;">
+                      <input type="checkbox" 
+                             name="answer" 
+                             value="${String.fromCharCode(65 + index)}"
+                             ${
+                               currentAnswer.includes(
+                                 String.fromCharCode(65 + index)
+                               )
+                                 ? "checked"
+                                 : ""
+                             }>
+                      <span>${option}</span>
+                  </label>
+              </div>
+          `
+        )
+        .join("");
+      break;
+  }
+
+  return html;
+}
+
+function saveEditedAnswer(type, problemId) {
+  const problemSetId = window.location.pathname.split("/")[2];
+  const answers = JSON.parse(localStorage.getItem(problemSetId));
+
+  let newAnswer;
+  if (type === "MULTIPLE_CHOICE_MORE_THAN_ONE_ANSWER") {
+    newAnswer = Array.from(
+      document.querySelectorAll('input[name="answer"]:checked')
+    )
+      .map((input) => input.value)
+      .sort();
+  } else {
+    newAnswer = document.querySelector('input[name="answer"]:checked')?.value;
+  }
+
+  if (!newAnswer || (Array.isArray(newAnswer) && newAnswer.length === 0)) {
+    showToast("请选择答案");
+    return;
+  }
+
+  answers[type].problems[problemId].answers = newAnswer;
+  localStorage.setItem(problemSetId, JSON.stringify(answers));
+  showToast("答案已保存");
+}
+
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.textContent = message;
+  toast.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 4px;
+      z-index: 10002;
+  `;
+
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 1000);
+}
 
 // 配置观察器
 observer.observe(document.body, {

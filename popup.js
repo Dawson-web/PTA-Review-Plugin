@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const exportButton = document.getElementById("exportButton");
   const importButton = document.getElementById("importButton");
   const exportJsonButton = document.getElementById("exportJsonButton");
+  const editAnswersButton = document.getElementById("editAnswersButton");
 
   // 从存储中加载当前状态
   chrome.storage.sync.get(
@@ -100,6 +101,15 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     });
   });
+
+  editAnswersButton.addEventListener("click", function () {
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, { type: "editAnswers" });
+      }
+    });
+  });
+
   // 向当前标签页发送消息
   function sendMessage(message) {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
