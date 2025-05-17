@@ -12,6 +12,12 @@ chrome.runtime.onInstalled.addListener(function () {
   });
 });
 
+// 监听插件图标点击事件
+chrome.action.onClicked.addListener((tab) => {
+  // 切换侧边栏
+  chrome.sidePanel.open({ windowId: tab.windowId });
+});
+
 // 监听标签页更新
 chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (changeInfo.status === "complete" && tab.url.includes("pintia.cn")) {

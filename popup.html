@@ -22,16 +22,21 @@
       }
 
       body {
-        width: 320px;
+        width: 380px;
+        height: 100vh;
         font-family: var(--font-family);
+        position: fixed;
+        right: 0;
+        top: 0;
+        background: white;
+        box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+        overflow-y: auto;
       }
 
       .card {
-        /* background-color: #fff; */
-        border-radius: var(--border-radius-base);
-        /* box-shadow: var(--box-shadow-base); */
         padding: 16px;
-        margin: 16px;
+        margin: 0;
+        height: 100%;
       }
 
       .card-header {
