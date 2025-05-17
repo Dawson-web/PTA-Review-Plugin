@@ -8,7 +8,8 @@ chrome.runtime.onInstalled.addListener(function () {
     hideCheckbox: false,
     hideResults: false,
     hideInputs: false,
-    hideText: false,
+    trainingMode: false,
+    filterError: false,
   });
 });
 
@@ -23,7 +24,14 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
   if (changeInfo.status === "complete" && tab.url.includes("pintia.cn")) {
     // 当PTA页面加载完成时，尝试应用保存的设置
     chrome.storage.sync.get(
-      ["hideRadio", "hideCheckbox", "hideResults", "hideInputs", "hideText"],
+      [
+        "hideRadio",
+        "hideCheckbox",
+        "hideResults",
+        "hideInputs",
+        "trainingMode",
+        "filterError",
+      ],
       function (result) {
         if (result.hideRadio) {
           chrome.tabs.sendMessage(tabId, { type: "radio", hide: true });
@@ -37,8 +45,11 @@ chrome.tabs.onUpdated.addListener(function (tabId, changeInfo, tab) {
         if (result.hideInputs) {
           chrome.tabs.sendMessage(tabId, { type: "inputs", hide: true });
         }
-        if (result.hideText) {
-          chrome.tabs.sendMessage(tabId, { type: "text", hide: true });
+        if (result.trainingMode) {
+          chrome.tabs.sendMessage(tabId, { type: "trainingMode", hide: true });
+        }
+        if (result.filterError) {
+          chrome.tabs.sendMessage(tabId, { type: "filterError", hide: true });
         }
       }
     );

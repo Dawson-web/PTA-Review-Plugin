@@ -60,7 +60,8 @@
       }
 
       .control-group {
-        margin-bottom: 16px;
+        width: 50%;
+        margin-bottom: 8px;
         display: flex;
         align-items: center;
         padding: 8px;
@@ -69,6 +70,20 @@
       }
 
       .control-group:hover {
+        background-color: rgba(0, 0, 0, 0.05);
+      }
+
+      .control-group full-width {
+        width: 100%;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        padding: 8px;
+        border-radius: var(--border-radius-base);
+        transition: background-color 0.3s;
+      }
+
+      .control-group full-width:hover {
         background-color: rgba(0, 0, 0, 0.05);
       }
 
@@ -175,6 +190,64 @@
         height: 40px;
         width: auto;
       }
+
+      .section {
+        display: flex;
+        flex-direction: column;
+        background-color: #f0f0f0;
+        padding: 16px;
+        border-radius: 16px;
+        margin-top: 16px;
+      }
+
+      .section-content {
+        display: flex;
+        flex-direction: row;
+        gap: 16px;
+      }
+
+      .control-group.full-width {
+        width: 100%;
+      }
+
+      #action-buttons-content {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      #action-buttons-content .button {
+        width: 100%;
+        margin-bottom: 0;
+        background-color: #4f46e5;
+        color: white;
+        border: 1px solid transparent;
+      }
+
+      #action-buttons-content .button:hover {
+        background-color: #4338ca;
+        border-color: #4338ca;
+      }
+
+      #action-buttons-content .button-secondary {
+        background-color: transparent;
+        color: #4f46e5;
+        border: 1px solid #4f46e5;
+      }
+
+      #action-buttons-content .button-secondary:hover {
+        background-color: #e0e7ff;
+        color: #3730a3;
+        border-color: #4f46e5;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+      }
+
+      .section-header {
+        margin-bottom: 10px;
+      }
     </style>
   </head>
   <body>
@@ -183,93 +256,111 @@
         <h1>PTA复习助手</h1>
       </div>
 
-      <div class="control-group">
-        <label>
-          <span class="switch">
-            <input type="checkbox" id="toggleRadio" />
-            <span class="slider"></span>
-          </span>
-          <span class="control-text">隐藏单选按钮</span>
-        </label>
-      </div>
+      <div class="section">
+        <div class="section-header">
+          <h2>复习模式(隐藏选项)</h2>
+        </div>
+        <div class="section-content">
+          <div class="control-group">
+            <label>
+              <span class="switch">
+                <input type="checkbox" id="toggleRadio" />
+                <span class="slider"></span>
+              </span>
+              <span class="control-text">单选</span>
+            </label>
+          </div>
 
-      <div class="control-group">
-        <label>
-          <span class="switch">
-            <input type="checkbox" id="toggleCheckbox" />
-            <span class="slider"></span>
-          </span>
-          <span class="control-text">隐藏多选按钮</span>
-        </label>
-      </div>
+          <div class="control-group">
+            <label>
+              <span class="switch">
+                <input type="checkbox" id="toggleCheckbox" />
+                <span class="slider"></span>
+              </span>
+              <span class="control-text">多选</span>
+            </label>
+          </div>
+        </div>
+        <div class="section-content">
+          <div class="control-group">
+            <label>
+              <span class="switch">
+                <input type="checkbox" id="toggleResults" />
+                <span class="slider"></span>
+              </span>
+              <span class="control-text">结果区域</span>
+            </label>
+          </div>
 
-      <div class="control-group">
-        <label>
-          <span class="switch">
-            <input type="checkbox" id="toggleResults" />
-            <span class="slider"></span>
-          </span>
-          <span class="control-text">隐藏结果区域</span>
-        </label>
-      </div>
+          <div class="control-group">
+            <label>
+              <span class="switch">
+                <input type="checkbox" id="toggleInputs" />
+                <span class="slider"></span>
+              </span>
+              <span class="control-text">填空答案</span>
+            </label>
+          </div>
+        </div>
 
-      <div class="control-group">
-        <label>
-          <span class="switch">
-            <input type="checkbox" id="toggleInputs" />
-            <span class="slider"></span>
-          </span>
-          <span class="control-text">隐藏填空答案</span>
-        </label>
-      </div>
-
-      <div class="control-group">
-        <label>
-          <span class="switch">
-            <input type="checkbox" id="toggleText" />
-            <span class="slider"></span>
-          </span>
-          <span class="control-text">重新做单选/多选/判断</span>
-        </label>
-      </div>
-      <div class="control-group">
-        <label>
-          <span class="switch">
-            <input type="checkbox" id="toggleRight" />
-            <span class="slider"></span>
-          </span>
-          <span class="control-text">只显示错误题目</span>
-        </label>
-      </div>
-
-      <button id="exportButton" class="button">导出答题答案</button>
-      <button
-        id="importButton"
-        class="button"
-        style="background-color: #4f46e5"
-      >
-        导入答题答案
-      </button>
-
-      <button
-        id="exportJsonButton"
-        class="button"
-        style="background-color: #4f46e5"
-      >
-        导出JSON
-      </button>
-      <div class="footer">
-        刷新页面后设置将自动应用
-        <div>
-          反馈：<a href="https://github.com/Dawson-web" target="_blank"
-            >GitHub Issues</a
-          >
+        <div class="control-group full-width">
+          <label>
+            <span class="switch">
+              <input type="checkbox" id="filterError" />
+              <span class="slider"></span>
+            </span>
+            <span class="control-text">筛选错题</span>
+          </label>
         </div>
       </div>
 
+      <div class="section">
+        <div class="section-header">
+          <h2>专注训练(重新做题)</h2>
+        </div>
+        <div class="section-content">
+          <div class="control-group full-width">
+            <label>
+              <span class="switch">
+                <input type="checkbox" id="trainingMode" />
+                <span class="slider"></span>
+              </span>
+              <span class="control-text">单选/多选/判断</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section" id="action-buttons-section">
+        <div class="section-header">
+          <h2>功能操作</h2>
+        </div>
+        <div class="section-content" id="action-buttons-content">
+          <div class="button-group">
+            <button id="exportJsonButton" class="button button-secondary">
+              导出JSON
+            </button>
+            <button id="editAnswersButton" class="button button-secondary">
+              编辑答案
+            </button>
+          </div>
+          <div class="button-group">
+            <button id="exportButton" class="button">导出答题答案</button>
+            <button id="importButton" class="button">导入答题答案</button>
+          </div>
+        </div>
+      </div>
       <!-- <div class="counter-container">
       <img src="https://count.getloli.com/get/@pta-review-plugin" alt="访问次数" />
     </div> -->
+    </div>
+    <div class="footer">
+      刷新页面后设置将自动应用
+      <div>
+        反馈：<a href="https://github.com/Dawson-web" target="_blank"
+          >GitHub Issues</a
+        >
+      </div>
     </div>
 
     <script src="popup.js"></script>

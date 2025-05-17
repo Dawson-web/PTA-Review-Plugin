@@ -8,7 +8,14 @@ const Type = {
 window.addEventListener("load", function () {
   // 检查是否需要应用已保存的设置
   chrome.storage.sync.get(
-    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs", "hideText"],
+    [
+      "hideRadio",
+      "hideCheckbox",
+      "hideResults",
+      "hideInputs",
+      "trainingMode",
+      "filterError",
+    ],
     function (result) {
       if (result.hideRadio) {
         toggleRadioVisibility(true);
@@ -22,8 +29,11 @@ window.addEventListener("load", function () {
       if (result.hideInputs) {
         toggleInputsVisibility(true);
       }
-      if (result.hideText) {
+      if (result.trainingMode) {
         toggleTextVisibility(true);
+      }
+      if (result.filterError) {
+        toggleRightVisibility(true);
       }
     }
   );
@@ -46,13 +56,13 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
     case "inputs":
       toggleInputsVisibility(message.hide);
       break;
-    case "text":
+    case "trainingMode":
       toggleTextVisibility(message.hide);
       break;
     case "exportAnswers":
       exportAnswers();
       break;
-    case "right":
+    case "filterError":
       toggleRightVisibility(message.hide);
       break;
     case "importAnswers":
@@ -788,7 +798,6 @@ function inlineStyles(element) {
 //   });
 // }
 
-
 function exportJson() {
   const problemSetId = window.location.pathname.split("/")[2];
   const targetUserId = JSON.parse(localStorage.getItem("user-cache")).userId;
@@ -1010,11 +1019,10 @@ function getProblemAnswers(type, res) {
   });
 }
 
-
 // 监听DOM变化，处理动态加载的元素
 const observer = new MutationObserver(function (mutations) {
   chrome.storage.sync.get(
-    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs", "hideText"],
+    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs", "trainingMode"],
     function (result) {
       if (result.hideRadio) {
         toggleRadioVisibility(true);
@@ -1028,7 +1036,7 @@ const observer = new MutationObserver(function (mutations) {
       if (result.hideInputs) {
         toggleInputsVisibility(true);
       }
-      if (result.hideText) {
+      if (result.trainingMode) {
         toggleTextVisibility(true);
       }
     }

@@ -4,16 +4,29 @@ document.addEventListener("DOMContentLoaded", function () {
   const toggleCheckbox = document.getElementById("toggleCheckbox");
   const toggleResults = document.getElementById("toggleResults");
   const toggleInputs = document.getElementById("toggleInputs");
-  const toggleText = document.getElementById("toggleText");
+  const trainingMode = document.getElementById("trainingMode");
+  const filterError = document.getElementById("filterError");
+  const exportButton = document.getElementById("exportButton");
+  const importButton = document.getElementById("importButton");
+  const exportJsonButton = document.getElementById("exportJsonButton");
+
   // 从存储中加载当前状态
   chrome.storage.sync.get(
-    ["hideRadio", "hideCheckbox", "hideResults", "hideInputs", "hideText"],
+    [
+      "hideRadio",
+      "hideCheckbox",
+      "hideResults",
+      "hideInputs",
+      "trainingMode",
+      "filterError",
+    ],
     function (result) {
       toggleRadio.checked = result.hideRadio || false;
       toggleCheckbox.checked = result.hideCheckbox || false;
       toggleResults.checked = result.hideResults || false;
       toggleInputs.checked = result.hideInputs || false;
-      toggleText.checked = result.hideText || false;
+      trainingMode.checked = result.trainingMode || false;
+      filterError.checked = result.filterError || false;
     }
   );
 
@@ -45,14 +58,17 @@ document.addEventListener("DOMContentLoaded", function () {
       sendMessage({ type: "inputs", hide: hideInputs });
     });
   });
-  toggleText.addEventListener("change", function () {
-    const hideText = toggleText.checked;
-    chrome.storage.sync.set({ hideText }, function () {
-      sendMessage({ type: "text", hide: hideText });
-    });
+
+  trainingMode.addEventListener("change", function () {
+    const isTrainingModeActive = trainingMode.checked;
+    chrome.storage.sync.set(
+      { trainingMode: isTrainingModeActive },
+      function () {
+        sendMessage({ type: "trainingMode", hide: isTrainingModeActive });
+      }
+    );
   });
-  // 添加导出按钮的点击事件处理
-  const exportButton = document.getElementById("exportButton");
+
   exportButton.addEventListener("click", function () {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       if (tabs[0]) {
@@ -62,16 +78,13 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // 隐藏正确答案
-  const toggleRight = document.getElementById("toggleRight");
-  toggleRight.addEventListener("change", function () {
-    const hideRight = toggleRight.checked;
-    chrome.storage.sync.set({ hideRight }, function () {
-      sendMessage({ type: "right", hide: hideRight });
+  filterError.addEventListener("change", function () {
+    const isFilterErrorActive = filterError.checked;
+    chrome.storage.sync.set({ filterError: isFilterErrorActive }, function () {
+      sendMessage({ type: "filterError", hide: isFilterErrorActive });
     });
   });
 
-  // 导入答题答案
-  const importButton = document.getElementById("importButton");
   importButton.addEventListener("click", function () {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       if (tabs[0]) {
@@ -80,8 +93,6 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  // 导出JSON
-  const exportJsonButton = document.getElementById("exportJsonButton");
   exportJsonButton.addEventListener("click", function () {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
       if (tabs[0]) {
