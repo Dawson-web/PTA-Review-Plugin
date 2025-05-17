@@ -30,7 +30,7 @@ window.addEventListener("load", function () {
         toggleInputsVisibility(true);
       }
       if (result.trainingMode) {
-        toggleTextVisibility(true);
+        toggleTrainingMode(true);
       }
       if (result.filterError) {
         toggleRightVisibility(true);
@@ -57,7 +57,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       toggleInputsVisibility(message.hide);
       break;
     case "trainingMode":
-      toggleTextVisibility(message.hide);
+      toggleTrainingMode(message.hide);
       break;
     case "exportAnswers":
       exportAnswers();
@@ -348,7 +348,10 @@ function closeModal() {
 }
 // --- 结束模态框相关函数 ---
 
-function toggleTextVisibility() {
+function toggleTrainingMode(hide) {
+  if (!hide) {
+    return window.location.reload();
+  }
   const res = new Map();
   const problemSetId = window.location.pathname.split("/")[2];
 
@@ -1037,7 +1040,7 @@ const observer = new MutationObserver(function (mutations) {
         toggleInputsVisibility(true);
       }
       if (result.trainingMode) {
-        toggleTextVisibility(true);
+        toggleTrainingMode(true);
       }
     }
   );
