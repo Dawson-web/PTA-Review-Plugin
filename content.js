@@ -70,7 +70,7 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
       importAnswers();
       break;
     case "exportJson":
-      exportJson();
+      exportJson(2);
       break;
   }
 
@@ -232,7 +232,7 @@ function handleSubmitAnswers(res) {
 }
 
 // 函数：创建并添加"汇总答案到控制台"按钮
-function addSubmitAnswersButton(res) {
+function addSubmitAnswersButton() {
   // 检查按钮是否已存在，防止重复添加
   if (document.getElementById("customSubmitAnswersButton")) {
     return;
@@ -257,13 +257,38 @@ function addSubmitAnswersButton(res) {
   submitButton.style.fontSize = "16px";
 
   submitButton.addEventListener("click", () => {
-    handleSubmitAnswers(res);
+    const currentAnswers = new Map();
+    const allPageInputs = document.querySelectorAll("input[name]");
+    const currentPageType = window.location.pathname.split("/").pop();
+
+    allPageInputs.forEach((input) => {
+      const name = input.getAttribute("name");
+
+      if (input.type === "radio") {
+        if (input.checked) {
+          currentAnswers.set(name, selectOption(input));
+        }
+      } else if (input.type === "checkbox") {
+        if (input.checked) {
+          currentAnswers.set(name, selectOption(input));
+        } else {
+          // For type "3" (MCMOTA), handleSubmitAnswers expects null for unchecked options.
+          if (currentPageType === "3") {
+            currentAnswers.set(name, null);
+          }
+        }
+      } else {
+        // Fill-in-the-blank, etc.
+        currentAnswers.set(name, input.value);
+      }
+    });
+    handleSubmitAnswers(currentAnswers);
   });
 
   document.body.appendChild(submitButton);
 }
 
-function selectOption(input, value) {
+function selectOption(input) {
   // Case 1: 判断题 (例如: <input ...>F)
   // "T" 或 "F" 是 input 元素的下一个兄弟文本节点
   if (input.nextSibling && input.nextSibling.nodeType === Node.TEXT_NODE) {
@@ -281,11 +306,6 @@ function selectOption(input, value) {
     if (span) {
       const spanText = span.textContent.trim();
       // 期望格式为 "A.", "B.", "C.", "D." 等
-      if (window.location.pathname.split("/").pop() === "3" && value) {
-        return null;
-      } else if (window.location.pathname.split("/").pop() === "3" && !value) {
-        return spanText.charAt(0);
-      }
 
       if (spanText.length > 0 && spanText.endsWith(".")) {
         return spanText.charAt(0); // 返回 "A", "B", "C", 或 "D"
@@ -394,7 +414,6 @@ function toggleTrainingMode(hide) {
   }
   toggleResultsVisibility(true);
 
-  let res = new Map();
   const problemSetId = window.location.pathname.split("/")[2];
 
   if (
@@ -423,7 +442,6 @@ function toggleTrainingMode(hide) {
   const allInputs = document.querySelectorAll("input"); // 更名以反映其选择所有input
 
   allInputs.forEach(function (input) {
-    res.set(input.getAttribute("name"), null);
     if (input.disabled) {
       input.checked = false; // 显式取消选中状态
     }
@@ -431,17 +449,13 @@ function toggleTrainingMode(hide) {
     input.removeAttribute("aria-label");
     input.style.cursor = "default";
     input.addEventListener("click", function (e) {
-      res.set(
-        input.getAttribute("name"),
-        selectOption(input, res.get(input.getAttribute("name")))
-      );
       e.stopPropagation();
     });
 
     input.parentElement.style.cursor = "default";
   });
-  if (res.size > 0) {
-    addSubmitAnswersButton(res);
+  if (allInputs.length > 0) {
+    addSubmitAnswersButton();
   }
 }
 
@@ -629,7 +643,7 @@ function inlineStyles(element) {
 // 添加锁定变量，防止重复请求
 let isExportingJson = false;
 
-function exportJson() {
+function exportJson(type = 1) {
   // 如果已经在导出中，则直接返回
   if (isExportingJson) {
     console.log("已有请求在进行中，跳过重复请求");
@@ -659,7 +673,7 @@ function exportJson() {
       localStorage.setItem("name", data.problemSet.name);
       return new Promise((resolve) => {
         setTimeout(() => {
-          getProblemSummaries().then(resolve);
+          getProblemSummaries(type).then(resolve);
         }, 1000);
       });
     })
@@ -672,7 +686,7 @@ function exportJson() {
     });
 }
 
-const getProblemSummaries = () => {
+const getProblemSummaries = (type) => {
   return new Promise((resolve, reject) => {
     const result = {
       name: localStorage.getItem("name"),
@@ -718,7 +732,19 @@ const getProblemSummaries = () => {
         resolve(result); // 成功时解决promise
       })
       .then(() => {
-        localStorage.setItem(problemSetId, JSON.stringify(result));
+        if (type === 1) {
+          localStorage.setItem(problemSetId, JSON.stringify(result));
+        }
+        if (type === 2) {
+          const blob = new Blob([JSON.stringify(result)], {
+            type: "application/json",
+          });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${problemSetId}.json`;
+          a.click();
+        }
       })
       .catch((error) => {
         console.error("处理题目数据时出错:", error);
